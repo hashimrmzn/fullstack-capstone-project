@@ -1,38 +1,36 @@
 const express = require('express');
 const router = express.Router();
-const connectToDatabase = require('../models/db'); // Make sure this exports a function that connects to MongoDB
+const connectToDatabase = require('../models/db');
 
 // Search for gifts
 router.get('/', async (req, res, next) => {
     try {
-        // Task 1: Connect to MongoDB
-        const db = await connectToDatabase(); // <-- connect to MongoDB
-        const collection = db.collection("gifts");
 
+        // Task 1: Connect to MongoDB
+        const db = await connectToDatabase();
+        const collection = db.collection("gifts");
         // Initialize the query object
         let query = {};
 
-        // Task 2: Add the name filter if it exists and is not empty
+        // Task 2: check if the name exists and is not empty
         if (req.query.name && req.query.name.trim() !== '') {
-            query.name = { $regex: req.query.name, $options: "i" }; // Case-insensitive partial match
+            query.name = { $regex: req.query.name, $options: "i" }; // Using regex for partial match, case-insensitive
         }
 
-        // Task 3: Add other filters
+        // Task 3: Add other filters to the query
         if (req.query.category) {
-            query.category = req.query.category; // Exact match for category
+            query.category = req.query.category;
         }
         if (req.query.condition) {
-            query.condition = req.query.condition; // Exact match for condition
+            query.condition = req.query.condition;
         }
         if (req.query.age_years) {
-            query.age_years = { $lte: parseInt(req.query.age_years) }; // Less than or equal to the age
+            query.age_years = { $lte: parseInt(req.query.age_years) };
         }
 
         // Task 4: Fetch filtered gifts
         const gifts = await collection.find(query).toArray();
-
-        // Send response
-        res.json({ success: true, gifts });
+        res.json(gifts);
     } catch (e) {
         next(e);
     }
