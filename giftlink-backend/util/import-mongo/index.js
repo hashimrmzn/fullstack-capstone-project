@@ -1,50 +1,51 @@
 require('dotenv').config();
-const MongoClient = require('mongodb').MongoClient;
+const { MongoClient } = require('mongodb');
 const fs = require('fs');
 
-// MongoDB connection URL with authentication options
-let url = `${process.env.MONGO_URL}`;
-let filename = `${__dirname}/gifts.json`;
+// MongoDB connection URL from .env
+const url = process.env.MONGO_URL;
 const dbName = 'giftdb';
 const collectionName = 'gifts';
+const filename = `${__dirname}/gifts.json`;
 
-// notice you have to load the array of gifts into the data object
+// Load gifts data from JSON file
 const data = JSON.parse(fs.readFileSync(filename, 'utf8')).docs;
 
-// connect to database and insert data into the collection
+// Function to load data into MongoDB
 async function loadData() {
     const client = new MongoClient(url);
 
     try {
-        // Connect to the MongoDB client
+        // Connect to MongoDB
         await client.connect();
-        console.log("Connected successfully to server");
+        console.log("Connected successfully to MongoDB");
 
-        // database will be created if it does not exist
         const db = client.db(dbName);
-
-        // collection will be created if it does not exist
         const collection = db.collection(collectionName);
-        let cursor = await collection.find({});
-        let documents = await cursor.toArray();
 
-        if(documents.length == 0) {
-            // Insert data into the collection
+        // Check if collection already has data
+        const existingDocs = await collection.countDocuments();
+
+        if (existingDocs === 0) {
+            // Insert data if collection is empty
             const insertResult = await collection.insertMany(data);
-            console.log('Inserted documents:', insertResult.insertedCount);
+            console.log(`Inserted ${insertResult.insertedCount} documents into "${collectionName}"`);
         } else {
-            console.log("Gifts already exists in DB")
+            console.log(`Collection "${collectionName}" already has documents. No data inserted.`);
         }
     } catch (err) {
-        console.error(err);
+        console.error("Error loading data:", err);
     } finally {
-        // Close the connection
         await client.close();
     }
 }
 
-loadData();
+// Optionally run loadData if this file is executed directly
+if (require.main === module) {
+    loadData();
+}
 
+// Export function so other files can call it
 module.exports = {
     loadData,
-  };
+};
