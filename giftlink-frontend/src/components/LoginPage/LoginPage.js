@@ -1,23 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AuthContext';
 import { urlConfig } from '../../config';
 import './LoginPage.css';
 
 function LoginPage() {
+    // State variables
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [showErr, setShowErr] = useState('');
+    const [incorrect, setIncorrect] = useState('');
 
+    // Local variables
     const navigate = useNavigate();
     const { setIsLoggedIn } = useAppContext();
+    const bearerToken = sessionStorage.getItem('auth-token');
 
+    // Redirect if user is already logged in
+    useEffect(() => {
+        if (bearerToken) {
+            navigate('/app');
+        }
+    }, [navigate, bearerToken]);
+
+    // Handle login API call
     const handleLogin = async () => {
         try {
             const response = await fetch(`${urlConfig.backendUrl}/api/auth/login`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': bearerToken ? `Bearer ${bearerToken}` : ''
                 },
                 body: JSON.stringify({
                     email,
@@ -28,24 +40,33 @@ function LoginPage() {
             const json = await response.json();
 
             if (response.ok && json.authtoken) {
-                // Save user details in sessionStorage
+                // Task 1 & 2: Access data and set user details
                 sessionStorage.setItem('auth-token', json.authtoken);
                 sessionStorage.setItem('name', json.userName);
                 sessionStorage.setItem('email', json.userEmail);
 
-                // Update global login state
+                // Task 3: Update global login state
                 setIsLoggedIn(true);
 
-                // Navigate to main page
+                // Task 4: Navigate to MainPage
                 navigate('/app');
-            } else if (json.error) {
-                setShowErr(json.error);
+
+                // Clear local inputs
+                setEmail('');
+                setPassword('');
             } else {
-                setShowErr('Login failed. Please try again.');
+                // Task 5: Clear input and set error message
+                setEmail('');
+                setPassword('');
+                setIncorrect(json.error || "Wrong password. Try again.");
+
+                // Optional: Clear error message after 2 seconds
+                setTimeout(() => setIncorrect(''), 2000);
             }
         } catch (e) {
             console.error('Login error: ' + e.message);
-            setShowErr('An error occurred. Please try again.');
+            setIncorrect('An error occurred. Please try again.');
+            setTimeout(() => setIncorrect(''), 2000);
         }
     };
 
@@ -80,7 +101,20 @@ function LoginPage() {
                             />
                         </div>
 
-                        {showErr && <div className="text-danger mb-3">{showErr}</div>}
+                        {/* Task 6: Display error message */}
+                        {incorrect && (
+                            <span
+                                style={{
+                                    color: 'red',
+                                    height: '.5cm',
+                                    display: 'block',
+                                    fontStyle: 'italic',
+                                    fontSize: '12px'
+                                }}
+                            >
+                                {incorrect}
+                            </span>
+                        )}
 
                         <button className="btn btn-primary w-100 mb-3" onClick={handleLogin}>
                             Login
